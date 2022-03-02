@@ -45,7 +45,7 @@ implementation
 		//call NeighborDiscovery.run();
 		msg.seq = SEQ_NUM;
 		
-		dbg(FLOODING_CHANNEL, "Sending from Node %u to %u with \"message\" %s\n", msg.src, msg.dest, msg.payload);
+		dbg(FLOODING_CHANNEL, "Sending from Node %u to %u with \"message\" %s with seq %u\n", msg.src, msg.dest, msg.payload, msg.seq);
 		call NeighborDiscovery.giveneighborlist(neighbors);
 		size = call NeighborDiscovery.givesize();
 		addToList(msg);
@@ -54,6 +54,7 @@ implementation
 			msg.TTL = MAX_TTL;
 			if (call Sender.send(msg, tempdest) == SUCCESS){
 				dbg(FLOODING_CHANNEL, "Initial Send.\n");
+				SEQ_NUM ++;
 				return SUCCESS;
 			}//send to neighbors
 		}
@@ -75,12 +76,12 @@ implementation
 			//dbg(FLOODING_CHANNEL, "size of neighbor: %u\n", size);
 			//dbg(FLOODING_CHANNEL, "First Neightbor: %u\n", neighbors[0].id);
 			//If I am the original sender and have seen the packet before, drop it
-			if(contents -> protocol != PROTOCOL_PING || contents -> dest == AM_BROADCAST_ADDR){
+			if(contents -> protocol != PROTOCOL_PING || contents -> dest == AM_BROADCAST_ADDR || contents -> seq == 0){
 				return msg;
 			}
 			if ((contents->src == TOS_NODE_ID) || isInList(*contents))
 			{
-				//dbg(FLOODING_CHANNEL, "Dropping packet.\n");
+				dbg(FLOODING_CHANNEL, "Dropping packet.\n");
 				return msg;
 			}
 			//Kill the packet if TTL is 0
@@ -92,14 +93,17 @@ implementation
             // to be continued by you ...
 			call NeighborDiscovery.giveneighborlist(neighbors);
 			size = call NeighborDiscovery.givesize();
-			dbg(FLOODING_CHANNEL, "Receieved from Node %u with message %s\n", contents -> src, contents -> payload);
+			dbg(FLOODING_CHANNEL, "Receieved from Node %u to Node %u with \"message\" %s and seq %u\n", contents -> src, contents -> dest, contents -> payload, contents -> seq);
 			addToList(*contents);
 			//after adding it to list, send it to other nodes
 			//dbg(FLOODING_CHANNEL, "Sending to: ");
-			
+			if(contents -> dest == TOS_NODE_ID){
+				dbg(FLOODING_CHANNEL, "Node %u recieved Message %s from Node %u\n", contents -> dest, contents -> payload, contents -> src);
+			}
 			//contents -> src = TOS_NODE_ID;
 			for(temp = 0; temp < size; temp ++){
 				if(contents -> src != TOS_NODE_ID){
+					//makePack(contents, contents -> src, contents -> dest, contents-> TTL, contents -> seq, contents-> protocol, contents -> payload, )
 					call Sender.send(*contents, neighbors[temp].id);//send to neighbors
 					//dbg(FLOODING_CHANNEL,"Sending to Neighbor Node %u\n", neighbors[temp].id);
 				}
