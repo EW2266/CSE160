@@ -132,7 +132,7 @@ class TestSim:
 def main():
     s = TestSim();
     s.runTime(10);
-    s.loadTopo("long_line.topo");
+    s.loadTopo("example.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
@@ -142,7 +142,7 @@ def main():
 
 
     for i in s.moteids:
-		s.runTime(20);
+		s.runTime(40);
 		s.neighborDMP(i);	
 
     s.runTime(20);
@@ -151,7 +151,7 @@ def main():
     #s.ping(1, 3, "Hi!");
     #s.runTime(20);
 
-    s.runTime(10);
+    s.runTime(20);
 		
     
 

@@ -1,4 +1,5 @@
 #include "../../includes/RoutingTableEntry.h"
+#include "../../includes/protocol.h"
 
 module RoutingTableP{
     provides interface RoutingTable;
@@ -35,14 +36,15 @@ implementation {
 
     command void RoutingTable.run(){
         call periodicTimer.startPeriodic(512);
-        send_to_neighbors();
     }
 
     event void periodicTimer.fired()
     {   
         dbg(ROUTING_CHANNEL, "Starting Routing Table\n");
-        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, SEQ_NUM , PROTOCOL_PING, temp , PACKET_MAX_PAYLOAD_SIZE);
+        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, SEQ_NUM , PROTOCOL_CMD, temp , PACKET_MAX_PAYLOAD_SIZE);
 		call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+
+        //send_to_neighbors();
     }
 
     event message_t *Receiver.receive(message_t * msg, void *payload, uint8_t len){
@@ -64,8 +66,13 @@ implementation {
         call NeighborDiscovery.giveneighborlist(neighbors);
         neighborsize = call NeighborDiscovery.givesize();
 
+        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, SEQ_NUM , PROTOCOL_DV, temp , PACKET_MAX_PAYLOAD_SIZE);
+
+
         for(temp1 = 0; temp1 < neighborsize; temp1++){
-            dbg(ROUTING_CHANNEL, "Sending to Neighbor Nodes\n");
+            dbg(ROUTING_CHANNEL, "Sending to Neighbor Node %u\n", neighbors[temp1].id);
         }
+
+
     }
 }

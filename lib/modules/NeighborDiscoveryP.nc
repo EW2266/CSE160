@@ -82,7 +82,7 @@ implementation
 		//cout << "test" <<endl;
 
         //optional - call a funsion to organize the list
-        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, SEQ_NUM , PROTOCOL_PING, temp , PACKET_MAX_PAYLOAD_SIZE);
+        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL, SEQ_NUM , PROTOCOL_PING, temp , PACKET_MAX_PAYLOAD_SIZE);
 		call Sender.send(sendPackage, AM_BROADCAST_ADDR);
     }
 
@@ -186,7 +186,7 @@ implementation
 		else{//if not full, add at end
 			neighbors[neighborsize] = newnode;
 			//dbg(NEIGHBOR_CHANNEL, "ADD Neighbor Added \n");
-			updateNeighbors();
+			//updateNeighbors();
 			neighborsize ++;
 			return SUCCESS;
 		}

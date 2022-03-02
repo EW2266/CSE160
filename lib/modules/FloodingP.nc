@@ -27,7 +27,7 @@ implementation
 {
 	pack sendPackage;
 	struct neighbor neighbors[20]; //Maximum of 20 neighbors?
-
+	uint16_t SEQ_NUM = 200;
 
 	// Prototypes
 	void makePack(pack * Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t seq, uint16_t protocol, uint8_t * payload, uint8_t length);
@@ -42,13 +42,16 @@ implementation
 		uint16_t tempdest;
 		uint16_t temp;
 		uint16_t size;
-		msg.TTL = MAX_TTL;
 		//call NeighborDiscovery.run();
-		//dbg(FLOODING_CHANNEL, "Sending from Flooding\n");
+		msg.seq = SEQ_NUM;
+		
+		dbg(FLOODING_CHANNEL, "Sending from Node %u to %u with \"message\" %s\n", msg.src, msg.dest, msg.payload);
 		call NeighborDiscovery.giveneighborlist(neighbors);
 		size = call NeighborDiscovery.givesize();
+		addToList(msg);
 		for(temp = 0; temp < size; temp ++){
 			tempdest = neighbors[temp].id;
+			msg.TTL = MAX_TTL;
 			if (call Sender.send(msg, tempdest) == SUCCESS){
 				dbg(FLOODING_CHANNEL, "Initial Send.\n");
 				return SUCCESS;
@@ -72,21 +75,24 @@ implementation
 			//dbg(FLOODING_CHANNEL, "size of neighbor: %u\n", size);
 			//dbg(FLOODING_CHANNEL, "First Neightbor: %u\n", neighbors[0].id);
 			//If I am the original sender and have seen the packet before, drop it
+			if(contents -> protocol != PROTOCOL_PING || contents -> dest == AM_BROADCAST_ADDR){
+				return msg;
+			}
 			if ((contents->src == TOS_NODE_ID) || isInList(*contents))
 			{
 				//dbg(FLOODING_CHANNEL, "Dropping packet.\n");
 				return msg;
 			}
 			//Kill the packet if TTL is 0
-			if (contents->TTL == 0){
+			//if (contents->TTL == 0){
             //do nothing
-            dbg(FLOODING_CHANNEL, "TTL: %d\n", contents-> TTL);
-            return msg;
-			}
+            	//dbg(FLOODING_CHANNEL, "TTL: %d\n", contents-> TTL);
+            	//return msg;
+			//}
             // to be continued by you ...
 			call NeighborDiscovery.giveneighborlist(neighbors);
 			size = call NeighborDiscovery.givesize();
-			dbg(FLOODING_CHANNEL, "Receieved from Node %u\n", contents -> src);
+			dbg(FLOODING_CHANNEL, "Receieved from Node %u with message %s\n", contents -> src, contents -> payload);
 			addToList(*contents);
 			//after adding it to list, send it to other nodes
 			//dbg(FLOODING_CHANNEL, "Sending to: ");
