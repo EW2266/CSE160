@@ -83,7 +83,7 @@ implementation{
       makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, destination);
       call Flooding.send(sendPackage, destination);
-      call RoutingTable.send(destination, payload);
+      call RoutingTable.send(destination, &payload);
    }
 
    event void CommandHandler.printNeighbors(){

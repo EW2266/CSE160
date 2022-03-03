@@ -51,7 +51,7 @@ implementation {
 	}
 
 	command void RoutingTable.send(uint16_t dest, uint8_t *payload) {
-        makePack(&sendPackage, TOS_NODE_ID, dest, 0, PROTOCOL_PING, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+        makePack(&sendPackage, TOS_NODE_ID, dest, 0, 0, PROTOCOL_PING, payload, PACKET_MAX_PAYLOAD_SIZE);
         dbg(ROUTING_CHANNEL, "PING FROM %u TO %u\n", TOS_NODE_ID, dest);
         logPack(&sendPackage);
         call RoutingTable.routePacket(&sendPackage);
@@ -70,9 +70,9 @@ implementation {
 	command void RoutingTable.routePacket(pack *contents){
 		
 		uint8_t nexthop;
-		//dbg(ROUTING_CHANNEL, "Dest: %u recieved by Node %u\n", contents -> dest, TOS_NODE_ID);
+		
 		if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PING){
-			makePack(&sendPackage, contents -> dest, contents -> src, 0, PROTOCOL_PINGREPLY, 0, (uint8_t*) contents -> payload, PACKET_MAX_PAYLOAD_SIZE);
+			makePack(&sendPackage, contents -> dest, contents -> src, 0, 0, PROTOCOL_PINGREPLY, (uint8_t*) contents -> payload, PACKET_MAX_PAYLOAD_SIZE);
 			dbg(ROUTING_CHANNEL, "PING SIGNAL RECIEVED\n");
 			call RoutingTable.routePacket(&sendPackage);
 			return;
@@ -80,6 +80,9 @@ implementation {
 		else if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PINGREPLY){
 			dbg(ROUTING_CHANNEL, "PINGREPLY SIGNAL RECIEVED\n");
 			return;
+		}
+		if(contents -> dest != 0){
+			dbg(ROUTING_CHANNEL, "Dest: %u recieved by Node %u\n", contents -> dest, TOS_NODE_ID);
 		}
 		
 		if((nexthop = call RoutingTable.getNextHop(contents->dest))){
@@ -113,8 +116,9 @@ implementation {
 				if(templist[temp1].dest == Table[temp2].dest){
 					
 					if(templist[temp1].next_hop != 0){
+						//dbg(ROUTING_CHANNEL, "templist[temp1].next_hop != 0\n");
 						if(Table[temp2].next_hop == contents -> src){
-							//dbg(ROUTING_CHANNEL, "Update cost\n");
+							//dbg(ROUTING_CHANNEL, "Table[temp2].next_hop == contents -> src\n");
 							//if(inList(templist[temp1]) == TRUE){
 								//dbg(ROUTING_CHANNEL, "Already in List\n");
 								//continue;
@@ -279,6 +283,7 @@ implementation {
 		//call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         //addroutetolist(TOS_NODE_ID, 0, TOS_NODE_ID, MAX_TTL);
         initializelist();
+		update;
         if(putneighborsinlist() == FALSE){
 			update();
 		}

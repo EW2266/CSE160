@@ -152,13 +152,13 @@ def main():
     #s.ping(1, 3, "Hi!");
     #s.runTime(20);
 
-    s.runTime(100);
+    s.runTime(10);
     for i in s.moteids:
-	    s.runTime(100);
+	    s.runTime(10);
 	    s.routeDMP(i);
 	
     #s.ping(1, 3, "Hi");
-    s.runTime(100);
+    s.runTime(10);
     
 
 if __name__ == '__main__':
