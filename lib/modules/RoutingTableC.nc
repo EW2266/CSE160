@@ -17,8 +17,9 @@ implementation{
 	components new SimpleSendC(AM_PACK) as SimpleSender;
     RoutingTableP.Sender -> SimpleSender;
 
-	components new AMReceiverC(AM_PACK) as AMReceiver;
-	RoutingTableP.Receiver -> AMReceiver;
+	//components new AMReceiverC(AM_PACK) as AMReceiver;
+	//RoutingTableP.Receiver -> AMReceiver;
+
 	
 	components NeighborDiscoveryC;
 	RoutingTableP.NeighborDiscovery -> NeighborDiscoveryC;
