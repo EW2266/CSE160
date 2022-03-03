@@ -39,15 +39,15 @@ implementation {
     //void addtolist(pack * contnets);
     void makePack(pack * Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t seq, uint16_t protocol, uint8_t * payload, uint8_t length);
 
-	uint32_t inList(uint16_t id){
+	bool inList(struct RoutingTableEntry entry){
 		uint32_t index1;
 		for(index1 = 0; index1 < tablesize; index1++){
             //dbg(ROUTING_CHANNEL, "%u vs. %u\n", Table[index1].dest, id);
-			if(Table[index1].dest == id){
-				return index1;
+			if(Table[index1].dest == entry.dest || Table[index1].next_hop == entry.next_hop){
+				return TRUE;
 			}
 		}
-		return 999;
+		return FALSE;
 	}
 
 	command void RoutingTable.send(uint16_t dest, uint8_t *payload) {
@@ -68,7 +68,9 @@ implementation {
 	}
 
 	command void RoutingTable.routePacket(pack *contents){
+		
 		uint8_t nexthop;
+		//dbg(ROUTING_CHANNEL, "Dest: %u recieved by Node %u\n", contents -> dest, TOS_NODE_ID);
 		if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PING){
 			makePack(&sendPackage, contents -> dest, contents -> src, 0, PROTOCOL_PINGREPLY, 0, (uint8_t*) contents -> payload, PACKET_MAX_PAYLOAD_SIZE);
 			dbg(ROUTING_CHANNEL, "PING SIGNAL RECIEVED\n");
@@ -80,11 +82,14 @@ implementation {
 			return;
 		}
 		
-		if(call RoutingTable.getNextHop(contents -> dest) != 0){
-			nexthop = call RoutingTable.getNextHop(contents -> dest);
-			dbg(ROUTING_CHANNEL, "%u packet passing through %u", TOS_NODE_ID, nexthop);
+		if((nexthop = call RoutingTable.getNextHop(contents->dest))){
+			dbg(ROUTING_CHANNEL, "Node %u packet passing through Node %u\n", TOS_NODE_ID, nexthop);
 			call Sender.send(*contents, nexthop);
 		}
+		else {
+            //dbg(ROUTING_CHANNEL, "No route to destination. Dropping packet...\n");
+            //logPack(myMsg);
+        }
 	}
 
 
@@ -95,29 +100,46 @@ implementation {
 		bool routeadded = FALSE;
 		struct RoutingTableEntry* templist = (struct RoutingTableEntry*) contents -> payload;
 
+		//dbg(ROUTING_CHANNEL, "DVRouring called\n");
+		
 		for(temp1 = 0; temp1 < 5; temp1 ++){
 			if(templist[temp1].dest == 0){
+				//dbg(ROUTING_CHANNEL, "Reached bottom\n");
 				break;
 			}
+			//dbg(ROUTING_CHANNEL, "Node %u, Dest: %u\n", TOS_NODE_ID, templist[temp1].dest);
 			for(temp2 = 0; temp2 < tablesize; temp2++){
+				
 				if(templist[temp1].dest == Table[temp2].dest){
+					
 					if(templist[temp1].next_hop != 0){
 						if(Table[temp2].next_hop == contents -> src){
+							//dbg(ROUTING_CHANNEL, "Update cost\n");
+							//if(inList(templist[temp1]) == TRUE){
+								//dbg(ROUTING_CHANNEL, "Already in List\n");
+								//continue;
+							//}
+							//dbg(ROUTING_CHANNEL, "Routing Packet - src: %u, dest: %u, seq: %u, next hop: %u, cost: %u\n", 
+							//	contents -> src, templist[temp1].dest, contents -> seq, templist[temp1].next_hop, templist[temp1].cost);
 							if(templist[temp1].cost + 1 < MAX_COST){
-								templist[temp1].cost ++;
+								Table[temp2].cost = templist[temp1].cost + 1;
 							}
 							else{
-								templist[temp1].cost = MAX_COST;
+								Table[temp2].cost = MAX_COST;
 							}
+							
+							//Table[temp2].cost = (templist[temp1].cost + 1 < MAX_COST) ? templist[temp1].cost + 1 : MAX_COST;
 						}
 						else if(templist[temp1].cost + 1 < MAX_COST && templist[temp1].cost + 1 < Table[temp2].cost){
 							Table[temp2].next_hop = contents -> src;
 							Table[temp2].cost = templist[temp1].cost + 1;
+							dbg(ROUTING_CHANNEL, "Optimal route found\n");
 						}
 					}
-					if(templist[temp1].next_hop == Table[temp2].next_hop && templist[temp1].cost == Table[temp2].cost && templist[temp1].cost != MAX_COST){
+					if(templist[temp1].next_hop == Table[temp2].next_hop && templist[temp1].cost == Table[temp2].cost && templist[temp1].cost < MAX_COST){
 						
 					}
+					//dbg(ROUTING_CHANNEL, "Route exist\n");
 					routeexist = TRUE;
 					break;
 				}
@@ -129,11 +151,12 @@ implementation {
 			routeexist = FALSE;
 		}
 		if(routeadded == TRUE){
+			//dbg(ROUTING_CHANNEL, "Route added\n");
 				update();
 		}
 	}
 
-
+	
 	
     void initializelist(){
     	addroutetolist(TOS_NODE_ID, 0, TOS_NODE_ID);
@@ -145,12 +168,13 @@ implementation {
 		bool foundroute = FALSE;
 		bool foundnewneighbor = FALSE;
 		
+		//dbg(ROUTING_CHANNEL, "put neighbors inlist\n");
 		call NeighborDiscovery.giveneighborlist(neighbors);
         neighborsize = call NeighborDiscovery.givesize();
         //dbg(ROUTING_CHANNEL, "Neighborsize: %u\n", neighborsize);
 		
 		for(temp1 = 0; temp1 < neighborsize; temp1++){
-			for(temp2 = 0; temp2 < tablesize; temp2++){
+			for(temp2 = 1; temp2 < tablesize; temp2++){
 				if(neighbors[temp1].id == Table[temp2].dest){
                 	Table[temp2].next_hop = neighbors[temp1].id;
 					Table[temp2].cost = 1;
@@ -160,12 +184,14 @@ implementation {
             //dbg(ROUTING_CHANNEL, "Neighbor Node %u\n", neighbors[temp1].id);
 			}
 			if(foundroute == FALSE && tablesize < MAX_ROUTE_ENTRIES){
+				//dbg(ROUTING_CHANNEL, "added new neighbors\n");
 				addroutetolist(neighbors[temp1].id, 1, neighbors[temp1].id);
 				foundnewneighbor = TRUE;
 			}
 			foundroute = FALSE;
 		}
 		if(foundnewneighbor){
+			//dbg(ROUTING_CHANNEL,"Found new neighbors\n");
 			update();
 			return TRUE;
 		}
@@ -186,10 +212,11 @@ implementation {
         }
         */
         if(tablesize >= MAX_ROUTE_ENTRIES){
+			//dbg(ROUTING_CHANNEL,"Max route entries reached\n");
 			return;
         }
         else{
-            dbg(ROUTING_CHANNEL, "Adding %u to list\n", dest);
+            //dbg(ROUTING_CHANNEL, "Adding %u to list for Node %u\n", dest, TOS_NODE_ID);
             //entry.dest = dest;
             //entry.cost = cost;
             //entry.next_hop = next_hop;
@@ -221,7 +248,7 @@ implementation {
     }
 
     command void RoutingTable.run(){
-        dbg(ROUTING_CHANNEL, "Starting Routing Table\n");
+        //dbg(ROUTING_CHANNEL, "Starting Routing Table on Node %u\n", TOS_NODE_ID);
         call periodicTimer.startPeriodic(512);
     }
 
@@ -297,18 +324,24 @@ implementation {
     }
 
 	void update(){
-		uint16_t listSize = call NeighborDiscovery.givesize();
+		
+		
 		uint8_t i, j, k, temp;
 		struct RoutingTableEntry Entry[5];
 		bool check = FALSE;
+		uint16_t listSize = call NeighborDiscovery.givesize();
 
+		//dbg(ROUTING_CHANNEL, "Update\n");
         call NeighborDiscovery.giveneighborlist(neighbors);
+		//dbg(ROUTING_CHANNEL, "Update\n");
 
 		for(i = 0; i < 5; i++){
 			Entry[i].dest = 0;
 			Entry[i].next_hop = 0;
 			Entry[i].cost = 0;
 		}
+		j = 0;
+		k = 0;
 		for(i = 0; i < listSize; i++){
 			while(j < tablesize){
 				if(neighbors[i].id == Table[j].next_hop){
@@ -321,10 +354,13 @@ implementation {
 				Entry[k].next_hop = Table[j].next_hop;
 				Entry[k].cost = Table[j].cost;
 				k++;
+				//dbg(ROUTING_CHANNEL, "Update\n");
 
 				if(k == 5 || j == tablesize-1){
-					makePack(&sendPackage, TOS_NODE_ID, neighbors[i].id, 1, PROTOCOL_DV, 0, (uint8_t*) Entry, sizeof(Entry)); 
+					makePack(&sendPackage, TOS_NODE_ID, neighbors[i].id, 1, 0, PROTOCOL_DV, (uint8_t*) Entry, sizeof(Entry)); 
+					
 					call Sender.send(sendPackage, neighbors[i].id);
+					//dbg(ROUTING_CHANNEL, "Sent DV to Neighbor %u\n", neighbors[i].id);
 
 						while(k > 0){
 							k--;
@@ -351,10 +387,12 @@ implementation {
         dbg(ROUTING_CHANNEL, "Routing Table:\n");
         dbg(ROUTING_CHANNEL, "Dest\tHop\tCount\n");
         for(temp = 0; temp < tablesize; temp++){
-            tempentry = Table[temp];
             //if(tempentry.dest != 999){
                 //dbg(ROUTING_CHANNEL, "Hi\n");
-            dbg(ROUTING_CHANNEL, "%u\t\t%u\t%u\n",tempentry.dest, tempentry.next_hop, tempentry.cost);
+				if(Table[temp].dest != TOS_NODE_ID){
+					dbg(ROUTING_CHANNEL, "%u\t\t%u\t%u\n",Table[temp].dest, Table[temp].next_hop, Table[temp].cost);
+				}
+            
             //}
         }
     }

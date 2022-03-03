@@ -37,13 +37,14 @@ implementation{
    event void Boot.booted(){
       call AMControl.start();
       call NeighborDiscovery.run();
+      call RoutingTable.run();
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
-         call RoutingTable.run();
+         
       }else{
          //Retry until successful
          call AMControl.start();
@@ -53,12 +54,25 @@ implementation{
    event void AMControl.stopDone(error_t err){}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-      //dbg(GENERAL_CHANNEL, "Packet Received\n");
+      pack* myMsg= (pack*) payload;
       if(len==sizeof(pack)){
-         pack* myMsg=(pack*) payload;
-         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+         //dbg(GENERAL_CHANNEL, "Packet Received protocol: %u\n", myMsg -> protocol);
+         if(myMsg->protocol == PROTOCOL_DV) {
+            //dbg(GENERAL_CHANNEL, "Got DV Protocol\n");
+            call RoutingTable.DVRouting(myMsg);
+         }
+         else if(myMsg->dest = 0){
+            dbg(GENERAL_CHANNEL, "neighbor missing\n");
+         }
+         else {
+            //dbg(GENERAL_CHANNEL, "Routing Packet\n");
+            call RoutingTable.routePacket(myMsg);
+            //call Flooding.handleFlooding(myMsg);
+         }
+         //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
+      
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
    }
@@ -69,6 +83,7 @@ implementation{
       makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       call Sender.send(sendPackage, destination);
       call Flooding.send(sendPackage, destination);
+      call RoutingTable.send(destination, payload);
    }
 
    event void CommandHandler.printNeighbors(){
@@ -78,7 +93,7 @@ implementation{
    }
 
    event void CommandHandler.printRouteTable(){
-      //call RoutingTable.print();
+      call RoutingTable.print();
    }
 
    event void CommandHandler.printLinkState(){}

@@ -7,7 +7,7 @@ typedef struct RoutingTableEntry{
     nx_uint8_t dest;
     nx_uint8_t cost;
     nx_uint8_t next_hop;
-    //nx_uint8_t TTL;
+    nx_uint8_t TTL;
 };
 
 

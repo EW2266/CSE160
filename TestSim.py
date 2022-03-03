@@ -132,13 +132,13 @@ class TestSim:
 def main():
     s = TestSim();
     s.runTime(50);
-    s.loadTopo("user.topo");
+    s.loadTopo("long_line.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
     s.addChannel(s.NEIGHBOR_CHANNEL);
-    s.addChannel(s.FLOODING_CHANNEL);
+    #s.addChannel(s.FLOODING_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL);
 
 
@@ -152,13 +152,13 @@ def main():
     #s.ping(1, 3, "Hi!");
     #s.runTime(20);
 
-    s.runTime(50);
+    s.runTime(100);
     for i in s.moteids:
-	    s.runTime(50);
+	    s.runTime(100);
 	    s.routeDMP(i);
 	
     #s.ping(1, 3, "Hi");
-    s.runTime(50);
+    s.runTime(100);
     
 
 if __name__ == '__main__':
