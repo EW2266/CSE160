@@ -17,7 +17,7 @@ module RoutingTableP{
     //Uses SimpleSend interface to forward recieved packet as broadcast
     uses interface SimpleSend as Sender;
     //Uses the Receive interface to determine if received packet is meant for me.
-	uses interface Receive as Receiver;
+	//uses interface Receive as Receiver;
 
     uses interface NeighborDiscovery;
 }
@@ -35,6 +35,7 @@ implementation {
     void addroutetolist(uint8_t dest, uint8_t cost, uint8_t next_hop);
     void printtable();
     void sendTable();
+    void update();
     //void addtolist(pack * contnets);
     void makePack(pack * Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t seq, uint16_t protocol, uint8_t * payload, uint8_t length);
 
@@ -50,42 +51,49 @@ implementation {
 	}
 
 	command void RoutingTable.send(uint16_t dest, uint8_t *payload) {
-        makePack(&routePack, TOS_NODE_ID, dest, 0, PROTOCOL_PING, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+        makePack(&sendPackage, TOS_NODE_ID, dest, 0, PROTOCOL_PING, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
         dbg(ROUTING_CHANNEL, "PING FROM %u TO %u\n", TOS_NODE_ID, dest);
-        logPack(&routePack);
-        call RoutingTable.routePacket(&routePack);
+        logPack(&sendPackage);
+        call RoutingTable.routePacket(&sendPackage);
     }
+
+    command uint16_t RoutingTable.getNextHop(uint16_t dest){
+		uint32_t x;
+		for(x = 0; x < tablesize; x++){
+			if(Table[x].dest == dest && Table[x].cost == MAX_COST){
+				return Table[x].next_hop;
+			}
+		}
+		return 0;
+	}
 
 	command void RoutingTable.routePacket(pack *contents){
 		uint8_t nexthop;
 		if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PING){
-			makePack(&sendPackage, contents -> dest, contents -> src, 0, PROTOCOL_PINGREPLY, 0, (uint8_t*) content -> payload, PACKET_MAX_PAYLOAD_SIZE);
+			makePack(&sendPackage, contents -> dest, contents -> src, 0, PROTOCOL_PINGREPLY, 0, (uint8_t*) contents -> payload, PACKET_MAX_PAYLOAD_SIZE);
 			dbg(ROUTING_CHANNEL, "PING SIGNAL RECIEVED\n");
 			call RoutingTable.routePacket(&sendPackage);
 			return;
 		}
-		else if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PING_REPLY){
+		else if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PINGREPLY){
 			dbg(ROUTING_CHANNEL, "PINGREPLY SIGNAL RECIEVED\n");
 			return;
 		}
-		else if(contents -> dest == TOSE_NODE_ID && contents -> protocol == PROTOCOL_TCP){
-			dbg(ROUTING_CHANNEL, "TCP SIGNAL RECIEVED\n");
-			call Transport.recieve(content);
-			return;
-		}
 		
-		if(getNextHop(content -> dest) != 0){
-			nexthop = getNextHop(content -> dest);
+		if(call RoutingTable.getNextHop(contents -> dest) != 0){
+			nexthop = call RoutingTable.getNextHop(contents -> dest);
 			dbg(ROUTING_CHANNEL, "%u packet passing through %u", TOS_NODE_ID, nexthop);
-			call Sender.send(*content, nexthop);
+			call Sender.send(*contents, nexthop);
 		}
 	}
+
+
 
 	command void RoutingTable.DVRouting(pack * contents){
 		uint16_t temp1, temp2;
 		bool routeexist = FALSE;
 		bool routeadded = FALSE;
-		RoutingTableEntry* templist = (RoutingTableEntry*) contents -> payload;
+		struct RoutingTableEntry* templist = (struct RoutingTableEntry*) contents -> payload;
 
 		for(temp1 = 0; temp1 < 5; temp1 ++){
 			if(templist[temp1].dest == 0){
@@ -103,7 +111,7 @@ implementation {
 							}
 						}
 						else if(templist[temp1].cost + 1 < MAX_COST && templist[temp1].cost + 1 < Table[temp2].cost){
-							Table[temp2].next_hop = content -> src;
+							Table[temp2].next_hop = contents -> src;
 							Table[temp2].cost = templist[temp1].cost + 1;
 						}
 					}
@@ -118,7 +126,7 @@ implementation {
 				addroutetolist(templist[temp1].dest, templist[temp1].cost + 1, contents -> src);
 				routeadded = TRUE;
 			}
-			routeexit = FALSE;
+			routeexist = FALSE;
 		}
 		if(routeadded == TRUE){
 				update();
@@ -152,7 +160,7 @@ implementation {
             //dbg(ROUTING_CHANNEL, "Neighbor Node %u\n", neighbors[temp1].id);
 			}
 			if(foundroute == FALSE && tablesize < MAX_ROUTE_ENTRIES){
-				addroutetolist(neighbors[temp1], 1, neighbors[temp1]);
+				addroutetolist(neighbors[temp1].id, 1, neighbors[temp1].id);
 				foundnewneighbor = TRUE;
 			}
 			foundroute = FALSE;
@@ -217,24 +225,14 @@ implementation {
         call periodicTimer.startPeriodic(512);
     }
 
-	command uint16_t RoutingTable.getNextHop(uint16_t dest){
-		uint32_t x;
-		for(x = 0; x < tablesize; x++){
-			if(Table[x].dest == dest && Table[x].cost == MAX_COST){
-				return Table[x].next_hop;
-			}
-		}
-		return 0;
-	}
-
 	command void RoutingTable.lostNeighbor(uint16_t lost){
-		
+		uint16_t i;
 		if(lost == 0){
 			return;
 		}
-		dbg(ROUTING_CHANNEL, "A neighbor has been lost %u. Updating table...\n", lostNeighbor);
-		for(uint16_t i = 1; i < tablesize; i++){
-			if(Table[i].dset == lost || Table[i].next_hop == lost){
+		dbg(ROUTING_CHANNEL, "A neighbor has been lost %u. Updating table...\n", lost);
+		for(i = 1; i < tablesize; i++){
+			if(Table[i].dest == lost || Table[i].next_hop == lost){
 				Table[i].cost == MAX_COST;
 			}
 		}
@@ -254,7 +252,7 @@ implementation {
 		//call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         //addroutetolist(TOS_NODE_ID, 0, TOS_NODE_ID, MAX_TTL);
         initializelist();
-        if(putneighborinlist == FALSE){
+        if(putneighborsinlist() == FALSE){
 			update();
 		}
     }
@@ -299,24 +297,21 @@ implementation {
     }
 
 	void update(){
-		uint32_t* neighbor = call NeighborDiscovery.giveneighborlist(neighbors);
 		uint16_t listSize = call NeighborDiscovery.givesize();
 		uint8_t i, j, k, temp;
-		RoutingTableEntry Entry[5];
+		struct RoutingTableEntry Entry[5];
 		bool check = FALSE;
+
+        call NeighborDiscovery.giveneighborlist(neighbors);
 
 		for(i = 0; i < 5; i++){
 			Entry[i].dest = 0;
 			Entry[i].next_hop = 0;
 			Entry[i].cost = 0;
 		}
-		for(i = 0; i < listSize; i++)D{
+		for(i = 0; i < listSize; i++){
 			while(j < tablesize){
-				if(neighbor[i] == Table[j].next_hop && STRATEGY == SPLIT_HORIZON){ 
-					temp = Table[j].next_hop;
-					Table[j].next_hop = 0;
-					check = TRUE;
-				}else if(neighbor[i] == Table[j].next_hop && STRATEGY == POISON_REVERSE){
+				if(neighbors[i].id == Table[j].next_hop){
 					temp = Table[j].cost;
 					Table[j].cost = MAX_COST;
 					check = TRUE;
@@ -328,8 +323,8 @@ implementation {
 				k++;
 
 				if(k == 5 || j == tablesize-1){
-					makePack(&sendPackage, TOS_NODE_ID, neighbor[i], 1, PROTOCOL_DV, 0, &Entry, sizeof(Entry)); 
-					call Sender.send(sendPackage, neighbor[i]);
+					makePack(&sendPackage, TOS_NODE_ID, neighbors[i].id, 1, PROTOCOL_DV, 0, (uint8_t*) Entry, sizeof(Entry)); 
+					call Sender.send(sendPackage, neighbors[i].id);
 
 						while(k > 0){
 							k--;
@@ -339,13 +334,11 @@ implementation {
 						}
 				}
 
-				if(check && STRATEGY == SPLIT_HORIZON){
-					Table[j].next_hop = temp;
-				}else if(check && STRATEGY == POISON_REVERSE){
+				if(check == TRUE){
 					Table[j].cost = temp;
 				}
 				check = FALSE;
-				j++
+				j++;
 			}
 			j=0;
 		}
