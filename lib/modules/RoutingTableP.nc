@@ -2,7 +2,7 @@
 #include "../../includes/protocol.h"
 #include "../../includes/packet.h"
 #define MAX_ROUTE_ENTRIES 20
-#define MAX_COST 999
+#define MAX_COST 20
 
 
 // change the names later 
@@ -187,7 +187,7 @@ implementation {
 				}
             //dbg(ROUTING_CHANNEL, "Neighbor Node %u\n", neighbors[temp1].id);
 			}
-			if(foundroute == FALSE && tablesize < MAX_ROUTE_ENTRIES){
+			if(foundroute == FALSE && tablesize != MAX_ROUTE_ENTRIES){
 				//dbg(ROUTING_CHANNEL, "added new neighbors\n");
 				addroutetolist(neighbors[temp1].id, 1, neighbors[temp1].id);
 				foundnewneighbor = TRUE;
@@ -215,21 +215,22 @@ implementation {
             tablesize++;
         }
         */
-        if(tablesize >= MAX_ROUTE_ENTRIES){
+        if(tablesize != MAX_ROUTE_ENTRIES){
 			//dbg(ROUTING_CHANNEL,"Max route entries reached\n");
+			Table[tablesize].dest = dest;
+            Table[tablesize].cost = cost;
+            Table[tablesize].next_hop = next_hop;
+            tablesize++;
 			return;
         }
-        else{
+        //else{
             //dbg(ROUTING_CHANNEL, "Adding %u to list for Node %u\n", dest, TOS_NODE_ID);
             //entry.dest = dest;
             //entry.cost = cost;
             //entry.next_hop = next_hop;
             //entry.TTL = ttl;
-            Table[tablesize].dest = dest;
-            Table[tablesize].cost = cost;
-            Table[tablesize].next_hop = next_hop;
-            tablesize++;
-        }
+            
+        //}
 
     }
 
@@ -253,6 +254,7 @@ implementation {
 
     command void RoutingTable.run(){
         //dbg(ROUTING_CHANNEL, "Starting Routing Table on Node %u\n", TOS_NODE_ID);
+		initializelist();
         call periodicTimer.startPeriodic(512);
     }
 
@@ -282,7 +284,7 @@ implementation {
         //makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL, SEQ_NUM , PROTOCOL_NAME, temp , PACKET_MAX_PAYLOAD_SIZE);
 		//call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         //addroutetolist(TOS_NODE_ID, 0, TOS_NODE_ID, MAX_TTL);
-        initializelist();
+        //initializelist();
 		update;
         if(putneighborsinlist() == FALSE){
 			update();
@@ -394,9 +396,9 @@ implementation {
         for(temp = 0; temp < tablesize; temp++){
             //if(tempentry.dest != 999){
                 //dbg(ROUTING_CHANNEL, "Hi\n");
-				if(Table[temp].dest != TOS_NODE_ID){
+				//if(Table[temp].dest != TOS_NODE_ID){
 					dbg(ROUTING_CHANNEL, "%u\t\t%u\t%u\n",Table[temp].dest, Table[temp].next_hop, Table[temp].cost);
-				}
+				//}
             
             //}
         }
