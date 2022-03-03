@@ -2,4 +2,5 @@
 
 interface RoutingTable{
     command void print();
+    command void run();
 }
