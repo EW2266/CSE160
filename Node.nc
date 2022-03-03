@@ -37,14 +37,13 @@ implementation{
    event void Boot.booted(){
       call AMControl.start();
       call NeighborDiscovery.run();
-      call RoutingTable.run();
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
-         
+         call RoutingTable.run();
       }else{
          //Retry until successful
          call AMControl.start();
@@ -55,19 +54,10 @@ implementation{
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       //dbg(GENERAL_CHANNEL, "Packet Received\n");
-      pack* myMsg=(pack*) payload;
       if(len==sizeof(pack)){
-         
-         //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+         pack* myMsg=(pack*) payload;
+         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
-      }
-      else if(myMsg -> protocol == PROTOCOL_DV){
-         call RoutingTable.DVRouting(myMsg);
-      }
-      else {
-            //call LinkStateRouting.routePacket(myMsg);
-            call RoutingTable.routePacket(myMsg);
-            //call Flooding.handleFlooding(myMsg);
       }
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
@@ -88,7 +78,7 @@ implementation{
    }
 
    event void CommandHandler.printRouteTable(){
-      call RoutingTable.print();
+      //call RoutingTable.print();
    }
 
    event void CommandHandler.printLinkState(){}
