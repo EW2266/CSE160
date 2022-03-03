@@ -1,11 +1,10 @@
 #include "../../includes/RoutingTableEntry.h"
 #include "../../includes/protocol.h"
 #include "../../includes/packet.h"
-#include "../../includes/DVR.h"
 #define MAX_ROUTE_ENTRIES 20
 #define MAX_COST 999
 
-#define STRATEGY	POISON_REVERSE 
+
 // change the names later 
 
 module RoutingTableP{
