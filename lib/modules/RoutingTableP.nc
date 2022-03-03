@@ -17,7 +17,7 @@ module RoutingTableP{
     //Uses SimpleSend interface to forward recieved packet as broadcast
     uses interface SimpleSend as Sender;
     //Uses the Receive interface to determine if received packet is meant for me.
-	//uses interface Receive as Receiver;
+	uses interface Receive as Receiver;
 
     uses interface NeighborDiscovery;
 }
@@ -95,7 +95,29 @@ implementation {
         }
 	}
 
-
+	event message_t* Receiver.receive(message_t* msg, void* payload, uint8_t len){
+      pack* myMsg= (pack*) payload;
+      if(len==sizeof(pack)){
+         //dbg(GENERAL_CHANNEL, "Packet Received protocol: %u\n", myMsg -> protocol);
+         if(myMsg->protocol == PROTOCOL_DV) {
+            //dbg(GENERAL_CHANNEL, "Got DV Protocol\n");
+            call RoutingTable.DVRouting(myMsg);
+         }
+         else if(myMsg->dest = 0){
+            dbg(GENERAL_CHANNEL, "neighbor missing\n");
+         }
+         else {
+            //dbg(GENERAL_CHANNEL, "Routing Packet\n");
+            call RoutingTable.routePacket(myMsg);
+            //call Flooding.handleFlooding(myMsg);
+         }
+         //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+         return msg;
+      }
+      
+      dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+      return msg;
+   }
 
 	command void RoutingTable.DVRouting(pack * contents){
 		uint16_t temp1, temp2;
@@ -285,7 +307,7 @@ implementation {
 		//call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         //addroutetolist(TOS_NODE_ID, 0, TOS_NODE_ID, MAX_TTL);
         //initializelist();
-		update;
+		update();
         if(putneighborsinlist() == FALSE){
 			update();
 		}

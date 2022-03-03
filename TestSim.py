@@ -131,7 +131,7 @@ class TestSim:
 
 def main():
     s = TestSim();
-    s.runTime(50);
+    s.runTime(1);
     s.loadTopo("long_line.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
@@ -151,14 +151,13 @@ def main():
     #s.runTime(10);
     #s.ping(1, 3, "Hi!");
     #s.runTime(20);
-
-    s.runTime(20);
+    #s.runTime(1);
+    s.runTime(10);
     for i in s.moteids:
-	    s.runTime(20);
-	    s.routeDMP(i);
+        s.routeDMP(i);
+        s.runTime(10);
 	
     #s.ping(1, 3, "Hi");
-    s.runTime(20);
     
 
 if __name__ == '__main__':

@@ -57,18 +57,18 @@ implementation{
       pack* myMsg= (pack*) payload;
       if(len==sizeof(pack)){
          //dbg(GENERAL_CHANNEL, "Packet Received protocol: %u\n", myMsg -> protocol);
-         if(myMsg->protocol == PROTOCOL_DV) {
+         //if(myMsg->protocol == PROTOCOL_DV) {
             //dbg(GENERAL_CHANNEL, "Got DV Protocol\n");
-            call RoutingTable.DVRouting(myMsg);
-         }
-         else if(myMsg->dest = 0){
-            dbg(GENERAL_CHANNEL, "neighbor missing\n");
-         }
-         else {
+            //call RoutingTable.DVRouting(myMsg);
+         //}
+         //else if(myMsg->dest = 0){
+            //dbg(GENERAL_CHANNEL, "neighbor missing\n");
+         //}
+         //else {
             //dbg(GENERAL_CHANNEL, "Routing Packet\n");
-            call RoutingTable.routePacket(myMsg);
+            //call RoutingTable.routePacket(myMsg);
             //call Flooding.handleFlooding(myMsg);
-         }
+         //}
          //dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
