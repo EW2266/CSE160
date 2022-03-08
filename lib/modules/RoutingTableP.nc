@@ -104,7 +104,7 @@ implementation {
             call RoutingTable.DVRouting(myMsg);
          }
          else if(myMsg->dest = 0){
-            dbg(GENERAL_CHANNEL, "neighbor missing\n");
+            //dbg(GENERAL_CHANNEL, "neighbor missing\n");
          }
          else {
             //dbg(GENERAL_CHANNEL, "Routing Packet\n");
