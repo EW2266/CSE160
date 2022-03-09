@@ -45,16 +45,16 @@ class TestSim:
 
     # Load a topo file and use it.
     def loadTopo(self, topoFile):
-        print 'Creating Topo!'
+        #print 'Creating Topo!'
         # Read topology file.
         topoFile = 'topo/'+topoFile
         f = open(topoFile, "r")
         self.numMote = int(f.readline());
-        print 'Number of Motes', self.numMote
+        #print 'Number of Motes', self.numMote
         for line in f:
             s = line.split()
             if s:
-                print " ", s[0], " ", s[1], " ", s[2];
+                #print " ", s[0], " ", s[1], " ", s[2];
                 self.r.add(int(s[0]), int(s[1]), float(s[2]))
                 if not int(s[0]) in self.moteids:
                     self.moteids=self.moteids+[int(s[0])]
@@ -78,7 +78,7 @@ class TestSim:
                 self.t.getNode(i).addNoiseTraceReading(val)
 
         for i in self.moteids:
-            print "Creating noise model for ",i;
+            #print "Creating noise model for ",i;
             self.t.getNode(i).createNoiseModel()
 
     def bootNode(self, nodeID):
@@ -132,12 +132,12 @@ class TestSim:
 def main():
     s = TestSim();
     s.runTime(1);
-    s.loadTopo("long_line.topo");
+    s.loadTopo("long_line_2.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
-    s.addChannel(s.NEIGHBOR_CHANNEL);
+    #s.addChannel(s.NEIGHBOR_CHANNEL);
     #s.addChannel(s.FLOODING_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL);
 

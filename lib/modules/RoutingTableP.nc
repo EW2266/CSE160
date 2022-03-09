@@ -72,7 +72,7 @@ implementation {
 		uint8_t nexthop;
 		
 		if(contents -> dest == TOS_NODE_ID && contents -> protocol == PROTOCOL_PING){
-			makePack(&sendPackage, contents -> dest, contents -> src, 0, 0, PROTOCOL_PINGREPLY, (uint8_t*) contents -> payload, PACKET_MAX_PAYLOAD_SIZE);
+			makePack(&sendPackage, contents -> dest, contents -> src, MAX_TTL, 0, PROTOCOL_PINGREPLY, (uint8_t*) contents -> payload, PACKET_MAX_PAYLOAD_SIZE);
 			dbg(ROUTING_CHANNEL, "PING SIGNAL RECIEVED\n");
 			call RoutingTable.routePacket(&sendPackage);
 			return;
@@ -256,20 +256,6 @@ implementation {
 
     }
 
-	void removeroute(uint8_t nodeid){
-		uint8_t temp1;
-		for(temp1 = nodeid + 1; temp1 < tablesize; temp1 ++){
-			Table[temp1 - 1].dest = Table[temp1].dest;
-			Table[temp1 - 1].next_hop = Table[temp1].next_hop;
-			Table[temp1 - 1].cost = Table[temp1].cost;
-		}
-
-		Table[temp1 - 1].dest = 0;
-		Table[temp1 - 1].next_hop = 0;
-		Table[temp1 - 1].cost = MAX_COST;
-		tablesize --;
-	}
-
     command void RoutingTable.print(){
         printtable();
     }
@@ -307,7 +293,7 @@ implementation {
 		//call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         //addroutetolist(TOS_NODE_ID, 0, TOS_NODE_ID, MAX_TTL);
         //initializelist();
-		update();
+		//update();
         if(putneighborsinlist() == FALSE){
 			update();
 		}
@@ -386,7 +372,7 @@ implementation {
 				//dbg(ROUTING_CHANNEL, "Update\n");
 
 				if(k == 5 || j == tablesize-1){
-					makePack(&sendPackage, TOS_NODE_ID, neighbors[i].id, 1, 0, PROTOCOL_DV, (uint8_t*) Entry, sizeof(Entry)); 
+					makePack(&sendPackage, TOS_NODE_ID, neighbors[i].id, MAX_TTL, 0, PROTOCOL_DV, (uint8_t*) Entry, sizeof(Entry)); 
 					
 					call Sender.send(sendPackage, neighbors[i].id);
 					//dbg(ROUTING_CHANNEL, "Sent DV to Neighbor %u\n", neighbors[i].id);
