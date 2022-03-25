@@ -69,6 +69,7 @@ implementation{
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       //call Sender.send(sendPackage, destination);
       //call Flooding.send(sendPackage, destination);
+      call RoutingTable.send(sendPackage, destination);
    }
 
    event void CommandHandler.printNeighbors(){

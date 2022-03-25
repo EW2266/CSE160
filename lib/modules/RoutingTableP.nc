@@ -54,6 +54,16 @@ implementation {
             	//dbg(GENERAL_CHANNEL, "Got DV Protocol\n");
             	call RoutingTable.DVRouting(myMsg);
         	}
+			if(myMsg->protocol == PROTOCOL_PING){
+				if(myMsg -> dest == TOS_NODE_ID){
+					dbg(ROUTING_CHANNEL, "Arrived at Node %u\n", TOS_NODE_ID);
+				}
+				else{
+					//dbg(ROUTING_CHANNEL, "Passing through Node%u\n", TOS_NODE_ID);
+					makePack(&sendPackage, myMsg -> src, myMsg -> dest, myMsg -> TTL, 0, 0, payload, len);
+					call RoutingTable.send(sendPackage, myMsg -> dest);
+				}
+			}
         	return msg;
 	  	}  
       	dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
@@ -263,4 +273,14 @@ implementation {
 					dbg(ROUTING_CHANNEL, "%u\t\t%u\t%u\n",Table[temp].dest, Table[temp].next_hop, Table[temp].cost);
         }
     }
+
+	command void RoutingTable.send(pack msg, uint16_t dest){
+		uint16_t temp;
+		for(temp = 0; temp < tablesize; temp++){
+			if(Table[temp].dest == dest){
+				dbg(ROUTING_CHANNEL, "Sending from Node %u to Destination Node %u, Next Hop Node %u\n", msg.src, dest, Table[temp].next_hop);
+				call Sender.send(msg, Table[temp].next_hop);
+			}
+		}
+	}
 }

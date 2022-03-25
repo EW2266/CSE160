@@ -132,19 +132,19 @@ class TestSim:
 def main():
     s = TestSim();
     s.runTime(10);
-    s.loadTopo("test3.topo");
+    s.loadTopo("test.topo");
     s.loadNoise("no_noise.txt");
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
     #s.addChannel(s.NEIGHBOR_CHANNEL);
-    s.addChannel(s.FLOODING_CHANNEL);
+    #s.addChannel(s.FLOODING_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL);
 
 
     
-    s.neighborDMP(1);
-    s.runTime(40);
+    #s.neighborDMP(1);
+    #s.runTime(40);
     
     s.neighborDMP(2);
     s.runTime(40);	
@@ -156,7 +156,7 @@ def main():
         s.routeDMP(i);
         
     s.runTime(20);	
-    s.ping(1, 3, "Hi");
+    s.ping(7, 9, "Hi");
     s.runTime(20);
 
 if __name__ == '__main__':
