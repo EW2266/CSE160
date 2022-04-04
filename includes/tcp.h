@@ -1,17 +1,20 @@
 #ifndef TCP_H
 #define TCP_H
 
+#define NUM_SUPPORTED_PORTS 256
+#define DEFAULT_RTT 700
+#define TCP_RTT_ALPHA 80
+#define TCP_PAYLOAD_LENGTH 5
+#define TCP_PAYLOAD_SIZE TCP_PAYLOAD_LENGTH*sizeof(nx_uint16_t)
+
 enum flags{
-    NS = 0;
-    CWR = 1;
-    ECE = 2;
-    URG = 3;
-    ACK = 4;
-    PSH = 5;
-    RST = 6;
-    SYN = 7;
-    FIN = 8;
-}
+    DATA = 0,
+    ACK = 1,
+	SYN = 2,
+	SYN_ACK = 3,
+    FIN = 4,
+    FIN_ACK = 5
+};
 
 typedef struct tcp{
     uint16_t srcport;
@@ -19,7 +22,7 @@ typedef struct tcp{
     uint16_t seqNUM;
     uint16_t ackNUM;
     uint16_t hdrLen;
-    flags flag;
+    enum flags flag;
     uint16_t adwin;
     
     uint8_t payload[16];

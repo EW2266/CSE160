@@ -1,4 +1,4 @@
-#include "../../packet.h"
+#include "../../includes/packet.h"
 #include "../../includes/socket.h"
 
 /**
@@ -16,6 +16,8 @@
  */
 
 interface Transport{
+
+   command void start();
    /**
     * Get a socket if there is one available.
     * @Side Client/Server

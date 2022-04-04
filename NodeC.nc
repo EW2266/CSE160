@@ -39,4 +39,7 @@ implementation {
 
     components RoutingTableC;
     Node.RoutingTable -> RoutingTableC.RoutingTable;
+
+    components TransportC;
+    Node.Transport -> TransportC.Transport;
 }

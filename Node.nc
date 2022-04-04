@@ -26,6 +26,7 @@ module Node{
    uses interface Flooding;
    uses interface NeighborDiscovery;
    uses interface RoutingTable;
+   uses interface Transport;
 }
 
 implementation{
@@ -37,6 +38,7 @@ implementation{
    event void Boot.booted(){
       call AMControl.start();
       call NeighborDiscovery.run();
+      call Transport.start();
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
