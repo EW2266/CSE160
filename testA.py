@@ -24,14 +24,12 @@ def main():
     # After sending a ping, simulate a little to prevent collision.
 
     s.runTime(300);
-    s.testServer(1);
+    s.testServer(1, 50);
     s.runTime(60);
 
-    s.testClient(4);
+    s.testClient(4, 5, 25, 50, 50);
     s.runTime(1);
     s.runTime(1000);
-
-
 
 if __name__ == '__main__':
     main()

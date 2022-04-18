@@ -17,6 +17,8 @@
 
 interface Transport{
 
+   command uint8_t send(pack* msg, uint8_t dest);
+
    command void start();
    /**
     * Get a socket if there is one available.

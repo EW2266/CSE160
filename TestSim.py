@@ -27,6 +27,9 @@ class TestSim:
 
     # Project 3
     TRANSPORT_CHANNEL="transport";
+    CMD_TEST_CLIENT = 4
+    CMD_TEST_SERVER = 5
+    CMD_CLIENT_CLOSE = 6
 
     # Personal Debuggin Channels for some of the additional models implemented.
     HASHMAP_CHANNEL="hashmap";
@@ -128,6 +131,14 @@ class TestSim:
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
+
+
+    def testServer(self, destination, port):
+        self.sendCMD(self.CMD_TEST_SERVER, destination, chr(port))
+
+    def testClient(self, src, dest, srcPort, destPort, transfer):
+        self.sendCMD(self.CMD_TEST_CLIENT, src, "{0}{1}{2}{3}{4}".format(chr(dest), chr(srcPort), chr(destPort), chr(transfer >> 8), chr(transfer & 0xFF)))
+
 
 def main():
     s = TestSim();

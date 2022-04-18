@@ -61,6 +61,13 @@ implementation{
         }
     }
 
+    command uint8_t Transport.send(pack* msg, uint8_t dest){
+        struct tcp* tcp_rc = (struct tcp*) msg->payload;
+        uint8_t fd;
+        fd = getSocket(TOS_NODE_ID, tcp_rc->destport, dest, tcp_rc->srcport);
+        sendTCPPacket(fd, DATA);
+    }
+
     void sendWindow(uint8_t fd) {
         uint16_t bytesRemaining = min(getSendBufferOccupied(fd), calcEffWindow(fd));
         uint8_t bytesSent;
@@ -308,7 +315,7 @@ void addConnection(uint8_t fd, uint8_t conn) {
             sockets[fd-1].RTX = call PeriodicTimer.getNow();
             calculateRTO(fd);
         }
-        makePack(&ippack, TOS_NODE_ID, sockets[fd-1].dest.addr, MAX_TTL, 0, PROTOCOL_TCP, &tcppack, sizeof(struct tcp));
+        makePack(&ippack, TOS_NODE_ID, sockets[fd-1].dest.addr, MAX_TTL, 0, PROTOCOL_TCP, (uint8_t*)&tcppack, sizeof(struct tcp));
         call RoutingTable.DVRouting(&ippack);
         return bytes;
     }
@@ -481,7 +488,7 @@ void addConnection(uint8_t fd, uint8_t conn) {
                         dbg(TRANSPORT_CHANNEL, "CONNECTION ESTABLISHED!\n");
                         sockets[fd-1].state = ESTABLISHED;
                     case ESTABLISHED:
-                        //dbg(TRANSPORT_CHANNEL, "Data received on node %u via port %u\n", TOS_NODE_ID, tcp_rc->destPort);
+                        dbg(TRANSPORT_CHANNEL, "Data received on node %u via port %u\n", TOS_NODE_ID, tcp_rc->destport);
                         if(readData(fd, tcp_rc))
                             // Send ACK
                             sendTCPPacket(fd, ACK);
@@ -754,6 +761,7 @@ void addConnection(uint8_t fd, uint8_t conn) {
         }
 
         if(sockets[fd - 1].state == LISTEN){
+            dbg(TRANSPORT_CHANNEL, "Shake");
             return SUCCESS;
         }
         else{
