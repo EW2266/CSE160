@@ -15,4 +15,5 @@ interface Hashmap<t>{
    command bool isEmpty();
    command uint16_t size();
    command uint32_t * getKeys();
+   command uint16_t getLength();
 }

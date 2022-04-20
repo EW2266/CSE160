@@ -1,26 +1,36 @@
-#include "../../includes/command.h"
-#include "../../includes/packet.h"
-#include "../../includes/neighbor.h"
-#include <Timer.h>
+/**
+ * ANDES Lab - University of California, Merced
+ * This class provides the basic functions of a network node.
+ *
+ * @author UCM ANDES Lab
+ * @date   2013/09/03
+ *
+ */
 
-configuration NeighborDiscoveryC{
+#include <Timer.h>
+#include "../../includes/CommandMsg.h"
+#include "../../includes/packet.h"
+
+configuration NeighborDiscoveryC {
     provides interface NeighborDiscovery;
 }
 
-implementation{
+implementation {
     components NeighborDiscoveryP;
-    NeighborDiscovery = NeighborDiscoveryP.NeighborDiscovery;
+    NeighborDiscovery = NeighborDiscoveryP;
 
-    components new SimpleSendC(AM_PACK) as SimpleSender;
-    NeighborDiscoveryP.Sender -> SimpleSender;
-
-    components new AMReceiverC(AM_PACK) as AMReceiver;
-    NeighborDiscoveryP.Receiver -> AMReceiver;
-
-    components new TimerMilliC() as periodicTimer;
-    NeighborDiscoveryP.periodicTimer -> periodicTimer;
-
-    //components new ListC(neighbor, 20) as Neighborhood;
-    //NeighborDiscoveryP.Neighborhood -> Neighborhood;
+    components new SimpleSendC(AM_PACK);
+    NeighborDiscoveryP.Sender -> SimpleSendC;
     
+    components new TimerMilliC() as NeighborDiscoveryTimer;
+    NeighborDiscoveryP.NeighborDiscoveryTimer -> NeighborDiscoveryTimer;
+
+    components RandomC as Random;
+    NeighborDiscoveryP.Random -> Random;
+
+    components new HashmapC(uint32_t, 20);
+    NeighborDiscoveryP.NeighborMap -> HashmapC;
+
+    components RoutingTableC;
+    NeighborDiscoveryP.RoutingTable -> RoutingTableC;
 }

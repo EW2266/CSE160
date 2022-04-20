@@ -11,7 +11,7 @@
 #include "includes/CommandMsg.h"
 #include "includes/packet.h"
 
-configuration NodeC{
+configuration NodeC {
 }
 implementation {
     components MainC;
@@ -24,22 +24,19 @@ implementation {
 
     components ActiveMessageC;
     Node.AMControl -> ActiveMessageC;
-
-    components new SimpleSendC(AM_PACK);
-    Node.Sender -> SimpleSendC;
-
+    
     components CommandHandlerC;
     Node.CommandHandler -> CommandHandlerC;
 
-    components NeighborDiscoveryC;
-    Node.NeighborDiscovery -> NeighborDiscoveryC.NeighborDiscovery;
-
     components FloodingC;
-    Node.Flooding -> FloodingC.Flooding;
+    Node.Flooding -> FloodingC;
+
+    components NeighborDiscoveryC;
+    Node.NeighborDiscovery -> NeighborDiscoveryC;
 
     components RoutingTableC;
-    Node.RoutingTable -> RoutingTableC.RoutingTable;
+    Node.RoutingTable -> RoutingTableC;
 
     components TransportC;
-    Node.Transport -> TransportC.Transport;
+    Node.Transport -> TransportC;
 }

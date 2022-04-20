@@ -1,8 +1,9 @@
-#include "../../includes/neighbor.h"
+#include "../../includes/packet.h"
 
-interface NeighborDiscovery{
-    command void run();
-    command void print();
-    command void giveneighborlist(struct neighbor* list);
-    command uint16_t givesize();
+interface NeighborDiscovery {
+   command error_t start();
+   command void handleNeighbor(pack* myMsg);
+   command void printNeighbors();
+   command uint32_t* getNeighbors();
+   command uint16_t getNeighborListSize();
 }

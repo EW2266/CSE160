@@ -1,240 +1,101 @@
 #include <Timer.h>
-#include "../../includes/command.h"
-#include "../../includes/packet.h"
-#include "../../includes/CommandMsg.h"
-#include "../../includes/sendInfo.h"
 #include "../../includes/channels.h"
-#include "../../includes/neighbor.h"
+#include "../../includes/packet.h"
+#include "../../includes/protocol.h"
+#include "../../includes/channels.h"
 
-module NeighborDiscoveryP
-{
+#define ND_TTL  5
 
-    //Provides the SimpleSend interface in order to neighbor discover packets
+module NeighborDiscoveryP {
     provides interface NeighborDiscovery;
-    //Uses SimpleSend interface to forward recieved packet as broadcast
+
+    uses interface Timer<TMilli> as NeighborDiscoveryTimer;
+    uses interface Random as Random;
     uses interface SimpleSend as Sender;
-    //Uses the Receive interface to determine if received packet is meant for me.
-	uses interface Receive as Receiver;
-
-	//uses interface CommandHandler;
-
-    uses interface Packet;
-    uses interface AMPacket;
-	//Uses the Queue interface to determine if packet recieved has been seen before
-	//uses interface List<neighbor> as Neighborhood;
-    uses interface Timer<TMilli> as periodicTimer;
-   
+    uses interface Hashmap<uint32_t> as NeighborMap;
+    uses interface RoutingTable as RoutingTable;
 }
 
+implementation {
+    pack sendPackage;
+    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-implementation
-{
-	/*
-    typedef struct neighbor{
-    	uint16_t TTL;
-    	uint16_t seq;
-	};
-	*/
-
-    pack sendPackage; 
-    uint16_t SEQ_NUM=200;
-    uint8_t *temp = &SEQ_NUM;
-	uint8_t temp1 = 0;
-	uint16_t maxsize = 20;
-
-    void makePack(pack * Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t seq, uint16_t protocol, uint8_t * payload, uint8_t length);
-
-	bool isNeighbor(uint8_t nodeid);
-    error_t addNeighbor(uint8_t nodeid);
-    void updateNeighbors();
-	void printNeighborhood();
-
-	struct neighbor neighbors[20]; //Maximum of 20 neighbors?
-	uint8_t neighborsize = 0;
-
-
-	
-    command void NeighborDiscovery.run()
-	{	
-		//dbg(NEIGHBOR_CHANNEL, "Sending from NeighborDiscovery\n");
-        //makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, SEQ_NUM , PROTOCOL_PING, temp , PACKET_MAX_PAYLOAD_SIZE);
-        //SEQ_NUM++;
-        //call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-
-		for(temp1 = 0; temp1 < 20; temp1++){
-			neighbors[temp1].id = -1;
-		}
-        call periodicTimer.startPeriodic(512);
-	}
-
-	command void NeighborDiscovery.print(){
-		printNeighborhood();
-	}
-
-    event void periodicTimer.fired()
-    {
-        //dbg(NEIGHBOR_CHANNEL, "Sending from NeighborDiscovery\n");
-        //updateNeighbors();
-
-		
-
-		//printNeighborhood();
-		//cout << "test" <<endl;
-
-        //optional - call a funsion to organize the list
-        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL, SEQ_NUM , PROTOCOL_PING, temp , PACKET_MAX_PAYLOAD_SIZE);
-		call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+    command error_t NeighborDiscovery.start() {
+        call NeighborDiscoveryTimer.startPeriodic(10000 + (uint16_t) (call Random.rand16()%1000));
+        dbg(NEIGHBOR_CHANNEL, "Neighbor Discovery Started on node %u!\n", TOS_NODE_ID);
+        return SUCCESS;
     }
 
-	//event void CommandHandler.printNeighbors(){
-		//printNeighborhood();
-	//}
+    command void NeighborDiscovery.handleNeighbor(pack* myMsg) {
+        // Neighbor Discovery packet received
+        if(myMsg->protocol == PROTOCOL_PING && myMsg->TTL > 0) {
+            myMsg->TTL -= 1;
+            myMsg->src = TOS_NODE_ID;
+            myMsg->protocol = PROTOCOL_PINGREPLY;
+            call Sender.send(*myMsg, AM_BROADCAST_ADDR);
+            dbg(NEIGHBOR_CHANNEL, "Neighbor Discovery PING!\n");
+        } else if(myMsg->protocol == PROTOCOL_PINGREPLY && myMsg->dest == 0) {
+            dbg(NEIGHBOR_CHANNEL, "Neighbor Discovery PINGREPLY! Found Neighbor %d\n", myMsg->src);
+            if(!call NeighborMap.contains(myMsg->src)) {
+                call NeighborMap.insert(myMsg->src, ND_TTL);
+                call RoutingTable.handleNeighborFound();
+                //call LinkStateRouting.handleNeighborFound();
+            } else {
+                call NeighborMap.insert(myMsg->src, ND_TTL);
+            }
+        }
+    }
 
-    event message_t *Receiver.receive(message_t * msg, void *payload, uint8_t len)
-    {
-		//dbg(NEIGHBOR_CHANNEL, "RECIEVED\n");
-        if (len == sizeof(pack)) //check if there's an actual packet
-        {
-            pack *contents = (pack*) payload;
-        	//dbg(NEIGHBOR_CHANNEL, "NeighborReciver Called, %d\n", contents -> protocol);
+    event void NeighborDiscoveryTimer.fired() {
+        uint16_t i = 0;
+        uint8_t payload = 0;
+        uint32_t* keys = call NeighborMap.getKeys();
+        call NeighborDiscovery.printNeighbors();
+        // Remove old neighbors
+        for(; i < call NeighborMap.size(); i++) {
+            if(keys[i] == 0) {
+                continue;
+            }
+            if(call NeighborMap.get(keys[i]) == 0) {
+                dbg(NEIGHBOR_CHANNEL, "Removing Neighbor %d\n", keys[i]);
+                call RoutingTable.handleNeighborLost(keys[i]);
+                //call LinkStateRouting.handleNeighborLost(keys[i]);
+                call NeighborMap.remove(keys[i]);
+            } else {
+                call NeighborMap.insert(keys[i], call NeighborMap.get(keys[i])-1);
+            }
+        }
+        // Send out a new neighbor discovery ping
+        makePack(&sendPackage, TOS_NODE_ID, 0, 1, PROTOCOL_PING, 0, &payload, PACKET_MAX_PAYLOAD_SIZE);
+        call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+    }
 
-            if (PROTOCOL_PING == contents -> protocol) //got a message, not a reply
-            {
-                if (contents -> TTL == 0)
-                {
-                //if TTL == 0, node dies, do nothing
-					//dbg(NEIGHBOR_CHANNEL, "PING, TTL = 0\n");
-					return msg;
-				}
-				if(isNeighbor(contents -> src)){//if it is in list, do nothing
-					//dbg(NEIGHBOR_CHANNEL, "PING, INLIST\n");
-					return msg;
-				}
-				//send a reply to node
-				contents -> dest = contents -> src;
-				contents -> src = TOS_NODE_ID;
-				contents -> protocol = PROTOCOL_PINGREPLY;
-				//dbg(NEIGHBOR_CHANNEL, "PING, PEPLYING\n");
-				call Sender.send(*contents, contents -> dest);
-			}
-			else if(PROTOCOL_PINGREPLY == contents -> protocol && contents -> seq == SEQ_NUM){ //when getting a reply from nodes
-				if (contents -> TTL == 0)
-                {
-                 //if TTL == 0, packet dies, do nothing
-				 	//dbg(NEIGHBOR_CHANNEL, "PINGREPLY TTL = 0\n");
-					return msg;
-				}
-				if(isNeighbor(contents -> src)){//if it is in list, do nothing
-					//dbg(NEIGHBOR_CHANNEL, "PINGREPLY INLIST\n");
-				}
-				else{
-					addNeighbor(contents -> src);
-					return msg;
-				}
-			}
-			return msg;
-		}
-		else{
-			//dbg(NEIGHBOR_CHANNEL, "not a packet\n");
-			return msg;
-		}
-		return msg;
-	}
+    command void NeighborDiscovery.printNeighbors() {
+        uint16_t i = 0;
+        uint32_t* keys = call NeighborMap.getKeys();    
+        // Print neighbors
+        dbg(NEIGHBOR_CHANNEL, "Printing Neighbors:\n");
+        for(; i < call NeighborMap.size(); i++) {
+            if(keys[i] != 0) {
+                dbg(NEIGHBOR_CHANNEL, "\tNeighbor: %d\n", keys[i]);
+            }
+        }
+    }
 
-	void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t seq, uint16_t protocol, uint8_t* payload, uint8_t length){
-      Package->src = src;
-      Package->dest = dest;
-      Package->TTL = TTL;
-      Package->seq = seq;
-      Package->protocol = protocol;
-      memcpy(Package->payload, payload, length);
-   }
+    command uint32_t* NeighborDiscovery.getNeighbors() {
+        return call NeighborMap.getKeys();
+    }
 
-	bool isNeighbor(uint8_t nodeid){	//checks if the node is in list
+    command uint16_t NeighborDiscovery.getNeighborListSize() {
+        return call NeighborMap.size();
+    }
 
-		struct neighbor newnode;
-
-		if(neighborsize == 0){ //not in list, return false
-			return FALSE;
-		}
-		
-		for(temp1 = 0; temp1 < neighborsize; temp1++){ //search through the list, if found, return true
-			newnode = neighbors[temp1];
-			if(newnode.id == nodeid){
-				return TRUE;
-			}
-		}
-		return FALSE; //if not found in the previous for loop, return false
-	}
-
-	error_t addNeighbor(uint8_t nodeid){
-		
-
-		struct neighbor newnode;
-
-		if(isNeighbor(nodeid)){	//if already in list, do nothing
-			//dbg(NEIGHBOR_CHANNEL, "ADD INLIST\n");
-			return FAIL;
-		}
-
-		newnode.id = nodeid;
-
-		if(neighborsize == maxsize){//if full, don't add
-			//dbg(NEIGHBOR_CHANNEL, "ADD List Full\n");
-			return FAIL;
-		}
-		else{//if not full, add at end
-			neighbors[neighborsize] = newnode;
-			//dbg(NEIGHBOR_CHANNEL, "ADD Neighbor Added \n");
-			//updateNeighbors();
-			neighborsize ++;
-			return SUCCESS;
-		}
-		return FAIL;
-	}
-	
-	void printNeighborhood(){
-
-		struct neighbor newnode;
-
-		//dbg(NEIGHBOR_CHANNEL, "Start Print \n");
-		dbg(NEIGHBOR_CHANNEL, "Node %u's Neighbors are: <\n", TOS_NODE_ID);
-		for(temp1 = 0; temp1 < neighborsize; temp1++){
-			newnode = neighbors[temp1];
-			dbg(NEIGHBOR_CHANNEL, "Node %u \n", newnode.id);
-			
-		}
-		dbg(NEIGHBOR_CHANNEL, ">\n");
-	}
-
-	void updateNeighbors(){
-
-		//struct neighbor newnode;
-	/*
-		for(temp1 = 0; temp1 < neighborsize; temp1++){
-			dbg(NEIGHBOR_CHANNEL, "List Updated\n");
-			//neighbors[temp1].TTL -= 1;
-			newnode = neighbors[temp1];
-			if(newnode.TTL < 1 || newnode.TTL > MAX_TTL){
-				neighbors[temp1].seq = 0;
-				//neighbors[temp1].TTL = 0;
-				neighborsize --;
-			}
-		}
-	*/
-
-		//dbg(NEIGHBOR_CHANNEL, "Updated, Current Neighbor Counts: %d\n", neighborsize);
-	}
-
-	command void NeighborDiscovery.giveneighborlist(struct neighbor* list){
-		//dbg(GENERAL_CHANNEL, "Give neighbor list\n");
-		for(temp1 = 0; temp1 < neighborsize; temp1 ++){
-			list[temp1].id = neighbors[temp1].id;
-		}
-	}
-
-	command uint16_t NeighborDiscovery.givesize(){
-		//dbg(GENERAL_CHANNEL, "Give neighbor size, %u\n", neighborsize);
-		return neighborsize;
-	}
+    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length) {
+        Package->src = src;
+        Package->dest = dest;
+        Package->TTL = TTL;
+        Package->seq = seq;
+        Package->protocol = protocol;
+        memcpy(Package->payload, payload, length);
+    }
 }

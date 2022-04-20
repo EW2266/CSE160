@@ -6,12 +6,11 @@ enum{
     ROOT_SOCKET_ADDR = 255,
     ROOT_SOCKET_PORT = 255,
     SOCKET_BUFFER_SIZE = 128,
-    OutOfRange = 2048,
 };
 
-enum socket_type{
+enum socket_type {
     SERVER,
-    CLIENT,
+    CLIENT
 };
 
 enum socket_state{
@@ -38,20 +37,21 @@ typedef uint8_t socket_port_t;
 typedef nx_struct socket_addr_t{
     nx_socket_port_t port;
     nx_uint16_t addr;
-}socket_addr_t;
+} socket_addr_t;
 
 
 // File descripter id. Each id is associated with a socket_store_t
 typedef uint8_t socket_t;
 
 // State of a socket. 
-typedef struct socket_store_t{
-    uint8_t flag;
-    enum socket_type type;
+typedef struct socket_store_t {
+    uint8_t flags;
     enum socket_state state;
+    enum socket_type type;
     socket_addr_t src;
     socket_addr_t dest;
-    uint8_t connections[MAX_NUM_OF_SOCKETS-1];
+    uint8_t connectionQueue[MAX_NUM_OF_SOCKETS-1];
+    uint8_t stopAndWait;
 
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
@@ -65,10 +65,10 @@ typedef struct socket_store_t{
     uint8_t lastRcvd;
     uint8_t nextExpected;
 
-    uint16_t RTT;
+    uint32_t RTT;
     uint32_t RTO;
     uint32_t RTX;
-    uint8_t effectiveWindow;
+    uint8_t advertisedWindow;
 }socket_store_t;
 
 #endif

@@ -18,4 +18,5 @@ char TRANSPORT_CHANNEL[]="transport";
 
 // Personal Debuggin Channels for some of the additional models implemented.
 char HASHMAP_CHANNEL[]="hashmap";
+char MAPLIST_CHANNEL[]="maplist";
 #endif

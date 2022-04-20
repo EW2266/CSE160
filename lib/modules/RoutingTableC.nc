@@ -1,25 +1,35 @@
-#include "../../includes/command.h"
-#include "../../includes/packet.h"
-#include "../../includes/RoutingTableEntry.h"
-#include <Timer.h>
+/**
+ * This class provides the Distance Vector Routing functionality for nodes on the network.
+ *
+ * @author Chris DeSoto
+ * @date   2013/09/30
+ *
+ */
 
-configuration RoutingTableC{
-	provides interface RoutingTable;
+#include <Timer.h>
+#include "../../includes/CommandMsg.h"
+#include "../../includes/packet.h"
+
+configuration RoutingTableC {
+    provides interface RoutingTable;
 }
 
-implementation{
-	components RoutingTableP;
-	RoutingTable = RoutingTableP.RoutingTable;
+implementation {
+    components RoutingTableP;
+    RoutingTable = RoutingTableP;
 
-	components new TimerMilliC() as periodicTimer;
-    RoutingTableP.periodicTimer -> periodicTimer;
+    components new SimpleSendC(AM_PACK);
+    RoutingTableP.Sender -> SimpleSendC;
 
-	components new SimpleSendC(AM_PACK) as SimpleSender;
-    RoutingTableP.Sender -> SimpleSender;
+    components NeighborDiscoveryC;
+    RoutingTableP.NeighborDiscovery -> NeighborDiscoveryC;
 
-	components new AMReceiverC(AM_PACK) as AMReceiver;
-	RoutingTableP.Receiver -> AMReceiver;
-	
-	components NeighborDiscoveryC;
-	RoutingTableP.NeighborDiscovery -> NeighborDiscoveryC;
+    components new TimerMilliC() as DVRTimer;
+    RoutingTableP.DVRTimer -> DVRTimer;
+
+    components RandomC as Random;
+    RoutingTableP.Random -> Random;
+
+    components TransportC as Transport;
+    RoutingTableP.Transport -> Transport;
 }

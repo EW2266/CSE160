@@ -170,4 +170,8 @@ implementation{
    command uint16_t Hashmap.size(){
       return numofVals;
    }
+
+   command uint16_t Hashmap.getLength() {
+       return HASH_MAX_SIZE;
+   }
 }

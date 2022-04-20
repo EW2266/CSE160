@@ -1,21 +1,26 @@
+/**
+ * This class provides the flooding functionality for nodes on the network.
+ *
+ * @author Chris DeSoto
+ * @date   2013/09/03
+ *
+ */
 
-configuration FloodingC{
-	provides interface Flooding;
+#include <Timer.h>
+#include "../../includes/CommandMsg.h"
+#include "../../includes/packet.h"
+
+configuration FloodingC {
+    provides interface Flooding;
 }
 
-implementation{
-	components FloodingP;
-	Flooding = FloodingP.Flooding;
+implementation {
+    components FloodingP;
+    Flooding = FloodingP;
 
-	components new SimpleSendC(AM_PACK) as SimpleSender;
-	FloodingP.Sender -> SimpleSender;
-	
-	components new AMReceiverC(AM_PACK) as AMReceiver;
-	FloodingP.Receiver -> AMReceiver;
-
-	components new ListC(pack, 20) as KnownPacketsList;//max 20 packets stored
-	FloodingP.KnownPacketsList -> KnownPacketsList;
-
-	components NeighborDiscoveryC;
-    FloodingP.NeighborDiscovery -> NeighborDiscoveryC;
+    components new SimpleSendC(AM_PACK);
+    FloodingP.Sender -> SimpleSendC;
+    
+    components new MapListC(uint16_t, uint16_t, 20, 20);
+    FloodingP.PacketsReceived -> MapListC;
 }
