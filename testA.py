@@ -25,10 +25,13 @@ def main():
 
     s.runTime(40)
 
-    s.testServer(1, 50)
+    s.testServer(1, 50) # Node 1 listening on port 50
     s.runTime(10)
 
-    s.testClient(2, 1, 25, 50, 50)
+    s.testClient(2, 1, 25, 50, 55) # Node 2 creating connection from port 25 to port 50 on node 1. Transferring bytes: 55
+    s.runTime(20)
+
+    s.cmdClientClose(2, 1, 25, 50)
     s.runTime(20)
 
 if __name__ == '__main__':

@@ -1,6 +1,9 @@
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
 
+#define TCP_APP_BUFFER_SIZE 1024
+#define TCP_APP_READ_SIZE 10
+
 enum{
     MAX_NUM_OF_SOCKETS = 10,
     ROOT_SOCKET_ADDR = 255,
@@ -29,7 +32,6 @@ enum socket_state{
     LAST_ACK
 };
 
-
 typedef nx_uint8_t nx_socket_port_t;
 typedef uint8_t socket_port_t;
 
@@ -38,7 +40,6 @@ typedef nx_struct socket_addr_t{
     nx_socket_port_t port;
     nx_uint16_t addr;
 } socket_addr_t;
-
 
 // File descripter id. Each id is associated with a socket_store_t
 typedef uint8_t socket_t;
@@ -70,5 +71,23 @@ typedef struct socket_store_t {
     uint32_t RTX;
     uint8_t advertisedWindow;
 }socket_store_t;
+
+typedef struct server_t {
+        uint8_t sockfd;
+        uint8_t conns[MAX_NUM_OF_SOCKETS-1];
+        uint8_t numConns;
+        uint16_t bytesRead;
+        uint16_t bytesWritten;
+        uint8_t buffer[TCP_APP_BUFFER_SIZE];
+    } server_t;
+
+    typedef struct client_t {
+        uint8_t sockfd;
+        uint16_t bytesWritten;
+        uint16_t bytesTransferred;
+        uint16_t counter;
+        uint16_t transfer;
+        uint8_t buffer[TCP_APP_BUFFER_SIZE];
+    } client_t;
 
 #endif
